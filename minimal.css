@@ -1,4 +1,4 @@
-/* Save this file as minimal.css beside index.html and styles.css. */
+/* Neutral grey, low-distraction theme. Loaded after styles.css. */
 :root {
   --bg: #e7e7e7;
   --panel: #f8f8f8;
@@ -9,6 +9,7 @@
   --line: #d6d6d6;
   --shadow: none;
 }
+
 body { background: var(--bg); }
 .sidebar { background: #f3f3f3; }
 .brand { letter-spacing: -.4px; }
