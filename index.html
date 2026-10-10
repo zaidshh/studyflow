@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#10111a" />
+  <title>StudyFlow</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">✦</span><span>StudyFlow</span></div>
+      <nav>
+        <button class="nav active" data-page="today">◉ <span>Today</span></button>
+        <button class="nav" data-page="subjects">▣ <span>Subjects</span></button>
+        <button class="nav" data-page="calendar">□ <span>Calendar</span></button>
+        <button class="nav" data-page="focus">◷ <span>Focus</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="dot"></span><span id="connection-status">Demo mode</span></div>
+    </aside>
+    <main>
+      <header><div><p class="eyebrow" id="page-kicker">STUDY SMARTER</p><h1 id="page-title">Good evening, Zaid</h1></div><button id="theme-toggle" class="icon-button" aria-label="Toggle theme">☼</button></header>
+      <section id="today" class="page active">
+        <div class="hero card"><div><p class="eyebrow purple">NEXT UP</p><h2>Data Structures · Binary Trees</h2><p>7:00 PM – 8:00 PM · 60 minutes</p></div><button class="primary" data-go="focus">Start focus session</button></div>
+        <div class="grid two"><article class="card"><p class="eyebrow purple">TODAY'S PLAN</p><h3>2 of 4 sessions complete</h3><div class="progress"><span style="width:50%"></span></div><p class="muted">You have 90 minutes planned for revision.</p></article><article class="card"><p class="eyebrow purple">UPCOMING</p><div class="list-row"><b>26 Dec</b><span>Practical / Seminar examination</span></div><div class="list-row"><b>11 Jan</b><span>End Semester Exams</span></div></article></div>
+      </section>
+      <section id="subjects" class="page">
+        <div class="page-action"><div><h2>My subjects</h2><p class="muted">Books, notes, topics, and AI study material in one place.</p></div><button id="add-subject" class="primary">+ Add subject</button></div>
+        <div id="subject-list" class="subject-grid"></div>
+      </section>
+      <section id="calendar" class="page">
+        <div class="page-action"><div><h2>Study calendar</h2><p class="muted">Your classes, exams, and revision sessions.</p></div><button id="add-event" class="primary">+ Schedule session</button></div>
+        <div class="calendar card"><div class="calendar-head"><button id="previous-month" class="icon-button">‹</button><h3 id="month-name"></h3><button id="next-month" class="icon-button">›</button></div><div class="weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div id="calendar-days" class="calendar-days"></div></div>
+        <div class="card"><p class="eyebrow purple">SCHEDULED</p><div id="event-list"></div></div>
+      </section>
+      <section id="focus" class="page">
+        <div class="focus-layout"><article class="timer-card card"><p class="eyebrow purple">FOCUS SESSION</p><h2 id="timer-label">Pomodoro</h2><div id="timer">25:00</div><div class="timer-actions"><button id="timer-start" class="primary">Start</button><button id="timer-reset" class="secondary">Reset</button></div><div class="presets"><button data-minutes="25">25 min</button><button data-minutes="50">50 min</button><button data-minutes="10">Short break</button></div></article><article class="card stats"><p class="eyebrow purple">TODAY</p><h2 id="focus-count">0 sessions</h2><p class="muted" id="focus-minutes">0 focused minutes</p><hr><p>Pick one task. Put your phone away. Begin before you feel ready.</p></article></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="modal"><form method="dialog" class="modal-content"><button class="close" value="cancel">×</button><h2 id="modal-title"></h2><div id="modal-body"></div></form></dialog>
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
