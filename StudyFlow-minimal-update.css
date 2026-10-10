@@ -1,0 +1,28 @@
+/* Save this file as minimal.css beside index.html and styles.css. */
+:root {
+  --bg: #e7e7e7;
+  --panel: #f8f8f8;
+  --panel2: #eeeeee;
+  --text: #252525;
+  --muted: #777777;
+  --purple: #4c4c4c;
+  --line: #d6d6d6;
+  --shadow: none;
+}
+body { background: var(--bg); }
+.sidebar { background: #f3f3f3; }
+.brand { letter-spacing: -.4px; }
+.nav { color: #666; border-radius: 8px; }
+.nav:hover, .nav.active { background: #dcdcdc; color: #242424; }
+.card { box-shadow: none; border-radius: 12px; }
+.hero { background: var(--panel); min-height: 150px; }
+.primary { background: #3e3e3e; color: #fff; border-radius: 8px; }
+.primary:hover { filter: none; background: #252525; }
+.secondary, .presets button, .icon-button { background: #eeeeee; color: #303030; border-radius: 8px; }
+.chip { background: #ededed; color: #555; }
+.progress span { background: #5c5c5c; }
+.day.has-event { background: #e2e2e2; color: #242424; }
+.event-pill { background: #5b5b5b; color: #fff; }
+dialog { background: #f8f8f8; color: #252525; box-shadow: 0 12px 40px #0003; }
+.field input, .field select { background: #fff; color: #252525; }
+@media (max-width: 720px) { .sidebar { background: #f3f3f3; } }
