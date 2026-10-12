@@ -1,0 +1,25 @@
+{
+  "name": "StudyFlow",
+  "short_name": "StudyFlow",
+  "description": "Personal College & Study OS",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0D13",
+  "theme_color": "#0B0D13",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://api.iconify.design/lucide:graduation-cap.svg?color=%23FACC15&width=192",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://api.iconify.design/lucide:graduation-cap.svg?color=%23FACC15&width=512",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
