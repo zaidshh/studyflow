@@ -1,49 +1,888 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#10111a" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>StudyFlow</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="minimal.css" />
-  <link rel="stylesheet" href="final.css" />
+
+  <!-- PWA & Mobile Standalone Tags -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0B0D13" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StudyFlow" />
+  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:graduation-cap.svg?color=%23FACC15&width=192" />
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js for in-browser client-side note extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background-color: #0B0D13;
+      color: #E2E8F0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar { display: none; }
+    .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    .tab-active { color: #FACC15; }
+    .tab-active i { stroke: #FACC15; }
+  </style>
 </head>
-<body>
-  <div class="shell">
-    <aside class="sidebar">
-      <div class="brand"><span>StudyFlow</span></div>
-      <nav>
-        <button class="nav active" data-page="today">◉ <span>Today</span></button>
-        <button class="nav" data-page="subjects">▣ <span>Subjects</span></button>
-        <button class="nav" data-page="calendar">□ <span>Calendar</span></button>
-        <button class="nav" data-page="focus">◷ <span>Focus</span></button>
-      </nav>
-      <div class="sidebar-bottom"><span class="dot"></span><span id="connection-status">Demo mode</span></div>
-    </aside>
-    <main>
-      <header><div><p class="eyebrow" id="page-kicker">STUDY SMARTER</p><h1 id="page-title">Good evening, Zaid</h1></div><button id="theme-toggle" class="icon-button" aria-label="Toggle theme">☼</button></header>
-      <section id="today" class="page active">
-        <div class="hero card"><div><p class="eyebrow purple">NEXT UP</p><h2>Data Structures · Binary Trees</h2><p>7:00 PM – 8:00 PM · 60 minutes</p></div><button class="primary" data-go="focus">Start focus session</button></div>
-        <div class="grid two"><article class="card"><p class="eyebrow purple">TODAY'S PLAN</p><h3>2 of 4 sessions complete</h3><div class="progress"><span style="width:50%"></span></div><p class="muted">You have 90 minutes planned for revision.</p></article><article class="card"><p class="eyebrow purple">UPCOMING</p><div class="list-row"><b>26 Dec</b><span>Practical / Seminar examination</span></div><div class="list-row"><b>11 Jan</b><span>End Semester Exams</span></div></article></div>
-      </section>
-      <section id="subjects" class="page">
-        <div class="page-action"><div><h2>My subjects</h2><p class="muted">Books, notes, topics, and AI study material in one place.</p></div><button id="add-subject" class="primary">+ Add subject</button></div>
-        <div id="subject-list" class="subject-grid"></div>
-      </section>
-      <section id="calendar" class="page">
-        <div class="page-action"><div><h2>Study calendar</h2><p class="muted">Your classes, exams, and revision sessions.</p></div><button id="add-event" class="primary">+ Schedule session</button></div>
-        <div class="calendar card"><div class="calendar-head"><button id="previous-month" class="icon-button">‹</button><h3 id="month-name"></h3><button id="next-month" class="icon-button">›</button></div><div class="weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div id="calendar-days" class="calendar-days"></div></div>
-        <div class="card"><p class="eyebrow purple">SCHEDULED</p><div id="event-list"></div></div>
-      </section>
-      <section id="focus" class="page">
-        <div class="focus-layout"><article class="timer-card card"><p class="eyebrow purple">FOCUS SESSION</p><h2 id="timer-label">Pomodoro</h2><div id="timer">25:00</div><div class="timer-actions"><button id="timer-start" class="primary">Start</button><button id="timer-reset" class="secondary">Reset</button></div><div class="presets"><button data-minutes="25">25 min</button><button data-minutes="50">50 min</button><button data-minutes="10">Short break</button></div></article><article class="card stats"><p class="eyebrow purple">TODAY</p><h2 id="focus-count">0 sessions</h2><p class="muted" id="focus-minutes">0 focused minutes</p><hr><p>Pick one task. Put your phone away. Begin before you feel ready.</p></article></div>
-      </section>
-    </main>
+
+<body class="min-h-screen pb-24 select-none">
+
+  <!-- ================= LOCK SCREEN / AUTH ================= -->
+  <div id="authScreen" class="fixed inset-0 z-50 bg-[#0B0D13] flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-xs space-y-6 text-center">
+      <div class="inline-flex p-4 rounded-2xl bg-[#191D28] border border-[#272C3D] text-[#FACC15]">
+        <i data-lucide="shield-check" class="w-10 h-10"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">StudyFlow</h1>
+        <p class="text-xs text-slate-400 mt-1">Personal College & Study Workspace</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-left">
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">User ID</label>
+          <input type="text" id="loginUser" required placeholder="User ID" value="zaid" 
+                 class="w-full mt-1.5 px-4 py-3 rounded-xl bg-[#191D28] border border-[#272C3D] text-white text-sm focus:outline-none focus:border-[#FACC15]" />
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Passcode</label>
+          <input type="password" id="loginPass" required placeholder="Passcode (Default: 1234)" value="1234" 
+                 class="w-full mt-1.5 px-4 py-3 rounded-xl bg-[#191D28] border border-[#272C3D] text-white text-sm focus:outline-none focus:border-[#FACC15]" />
+        </div>
+        <p id="authError" class="text-xs text-rose-400 hidden text-center">Invalid User ID or Passcode</p>
+        <button type="submit" 
+                class="w-full py-3.5 rounded-xl bg-[#FACC15] text-black font-semibold text-sm hover:bg-[#EAB308] active:scale-95 transition-transform flex items-center justify-center gap-2">
+          <span>Enter Workspace</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
   </div>
-  <dialog id="modal"><form method="dialog" class="modal-content"><button class="close" value="cancel">×</button><h2 id="modal-title"></h2><div id="modal-body"></div></form></dialog>
-  <script src="config.js"></script>
-  <script type="module" src="app.js"></script>
-  <script src="final.js"></script>
+
+  <!-- ================= APP BAR ================= -->
+  <header class="sticky top-0 z-30 bg-[#0B0D13]/90 backdrop-blur-md border-b border-[#272C3D]/60 px-5 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-[#FACC15] flex items-center justify-center text-black font-black text-sm">SF</div>
+      <div>
+        <h2 class="text-sm font-bold text-white tracking-wide">StudyFlow</h2>
+        <p id="topDateLabel" class="text-[11px] text-slate-400">Loading date...</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openSupabaseModal()" title="Sync Settings" class="p-2 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:text-[#FACC15]">
+        <i data-lucide="database" class="w-4 h-4"></i>
+      </button>
+      <button onclick="lockApp()" title="Lock App" class="p-2 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:text-rose-400">
+        <i data-lucide="lock" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-6">
+
+    <!-- 1. VIEW: TODAY / HOME -->
+    <section id="view-today" class="view-panel space-y-5">
+      <!-- Timetable Card -->
+      <div class="p-4 rounded-2xl bg-[#12151E] border border-[#272C3D]">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4 text-[#FACC15]"></i>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Today's Lectures</h3>
+          </div>
+          <button onclick="openTimetableModal()" class="px-3 py-1.5 rounded-lg bg-[#FACC15] text-black font-semibold text-xs flex items-center gap-1.5 hover:bg-yellow-400 active:scale-95 transition-all">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span>Edit Today</span>
+          </button>
+        </div>
+
+        <div id="todayLecturesList" class="space-y-2.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Quick Task Entry -->
+      <div class="p-4 rounded-2xl bg-[#12151E] border border-[#272C3D] space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Quick Task</h3>
+          <span class="text-[10px] text-slate-500">Pick Target Day</span>
+        </div>
+        <input type="text" id="newTaskInput" placeholder="Write down assignment, lab report, quiz..." 
+               class="w-full px-3.5 py-2.5 rounded-xl bg-[#191D28] border border-[#272C3D] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FACC15]" />
+        
+        <div class="flex items-center gap-2">
+          <button onclick="setTargetDay('today')" id="btnTargetToday" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#FACC15] text-black">Today</button>
+          <button onclick="setTargetDay('tomorrow')" id="btnTargetTomorrow" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#191D28] border border-[#272C3D] text-slate-300">Tomorrow</button>
+          <button onclick="setTargetDay('other')" id="btnTargetOther" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#191D28] border border-[#272C3D] text-slate-300">Later</button>
+        </div>
+        <input type="date" id="customTargetDate" class="hidden w-full px-3 py-2 rounded-xl bg-[#191D28] border border-[#272C3D] text-xs text-white" />
+
+        <button onclick="addTask()" class="w-full py-2.5 rounded-xl bg-[#FACC15] text-black font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Add Task</span>
+        </button>
+      </div>
+
+      <!-- Checklist -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Checklist</h4>
+          <span id="todayTaskCount" class="text-[11px] text-[#FACC15] font-semibold">0 Pending</span>
+        </div>
+        <div id="todayTasksContainer" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- 2. VIEW: AGENDA / GOOGLE CALENDAR STREAM -->
+    <section id="view-calendar" class="view-panel hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-white">Agenda Stream</h3>
+          <p class="text-xs text-slate-400">Google Calendar-style chronological list</p>
+        </div>
+      </div>
+      <div id="calendarAgendaStream" class="space-y-5"></div>
+    </section>
+
+    <!-- 3. VIEW: STUDY LAB & AI ROADMAP -->
+    <section id="view-studylab" class="view-panel hidden space-y-4">
+      <div>
+        <h3 class="text-base font-bold text-white">Study Lab & Roadmaps</h3>
+        <p class="text-xs text-slate-400">Upload notes, PDFs, or photos to get roadmaps & video tutorials</p>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-[#12151E] border border-dashed border-[#272C3D] hover:border-[#FACC15] transition-colors text-center">
+        <input type="file" id="studyDocInput" accept=".pdf,image/*,.txt" class="hidden" onchange="handleFileUpload(event)" />
+        <label for="studyDocInput" class="cursor-pointer block space-y-2">
+          <div class="w-12 h-12 mx-auto rounded-xl bg-[#191D28] text-[#FACC15] flex items-center justify-center">
+            <i data-lucide="file-up" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <span class="text-xs font-bold text-white">Tap to upload syllabus, notes, or photo</span>
+            <p class="text-[10px] text-slate-400 mt-0.5">Supports PDF, PNG, JPG, or TXT</p>
+          </div>
+        </label>
+      </div>
+
+      <div class="flex gap-2">
+        <input type="text" id="manualTopicInput" placeholder="Or enter subject / chapter name..." 
+               class="flex-1 px-3.5 py-2.5 rounded-xl bg-[#191D28] border border-[#272C3D] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FACC15]" />
+        <button onclick="generateRoadmapFromText()" class="px-3.5 py-2.5 rounded-xl bg-[#FACC15] text-black font-semibold text-xs flex items-center gap-1 active:scale-95">
+          <span>Generate</span>
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <div id="roadmapResults" class="space-y-3"></div>
+    </section>
+
+    <!-- 4. VIEW: FOCUS TIMER -->
+    <section id="view-focus" class="view-panel hidden space-y-6 text-center">
+      <div class="p-6 rounded-3xl bg-[#12151E] border border-[#272C3D] space-y-6">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span class="uppercase tracking-wider font-semibold">Focus Mode</span>
+          <button onclick="promptEditFocusDuration()" title="Edit Duration" class="p-1.5 rounded-lg bg-[#191D28] text-[#FACC15] hover:bg-yellow-400/20">
+            <i data-lucide="pencil" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="relative w-56 h-56 mx-auto flex items-center justify-center">
+          <div class="w-full h-full rounded-full border-4 border-[#191D28] flex items-center justify-center">
+            <div class="text-center">
+              <span id="timerDisplay" class="text-5xl font-black text-white tracking-tighter">25:00</span>
+              <p id="timerStateLabel" class="text-xs text-slate-400 mt-2">Ready to study</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-center gap-2">
+          <button onclick="setTimerDuration(25)" class="px-3 py-1.5 rounded-lg bg-[#191D28] text-xs font-medium text-slate-300 hover:text-[#FACC15]">25m</button>
+          <button onclick="setTimerDuration(45)" class="px-3 py-1.5 rounded-lg bg-[#191D28] text-xs font-medium text-slate-300 hover:text-[#FACC15]">45m</button>
+          <button onclick="setTimerDuration(60)" class="px-3 py-1.5 rounded-lg bg-[#191D28] text-xs font-medium text-slate-300 hover:text-[#FACC15]">60m</button>
+          <button onclick="setTimerDuration(5)" class="px-3 py-1.5 rounded-lg bg-[#191D28] text-xs font-medium text-slate-300 hover:text-[#FACC15]">5m Break</button>
+        </div>
+
+        <div class="flex justify-center items-center gap-3 pt-2">
+          <button onclick="toggleTimer()" id="timerToggleBtn" class="px-8 py-3 rounded-xl bg-[#FACC15] text-black font-bold text-sm active:scale-95 transition-all">
+            Start Focus
+          </button>
+          <button onclick="resetTimer()" class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] text-slate-400 hover:text-white">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#0B0D13]/95 backdrop-blur-lg border-t border-[#272C3D] px-6 py-2.5">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <button onclick="switchTab('today')" id="tab-today" class="flex flex-col items-center gap-1 text-slate-400 tab-active">
+        <i data-lucide="check-square" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Today</span>
+      </button>
+      <button onclick="switchTab('calendar')" id="tab-calendar" class="flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="calendar-days" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Agenda</span>
+      </button>
+      <button onclick="switchTab('studylab')" id="tab-studylab" class="flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="book-marked" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Study Lab</span>
+      </button>
+      <button onclick="switchTab('focus')" id="tab-focus" class="flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="clock" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Focus</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= TIMETABLE (EDIT TODAY) MODAL ================= -->
+  <div id="timetableModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-md bg-[#12151E] border border-[#272C3D] rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] flex flex-col space-y-4">
+      <div class="flex items-center justify-between border-b border-[#272C3D] pb-3">
+        <h3 class="text-sm font-bold text-white">Edit Today's Schedule</h3>
+        <button onclick="closeTimetableModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="editableLecturesList" class="overflow-y-auto space-y-3 custom-scroll flex-1 pr-1"></div>
+      <div class="flex gap-2 pt-2 border-t border-[#272C3D]">
+        <button onclick="addNewLectureRow()" class="flex-1 py-2.5 rounded-xl bg-[#191D28] border border-[#272C3D] text-slate-200 text-xs font-semibold hover:border-[#FACC15]">+ Add Class</button>
+        <button onclick="saveTimetable()" class="flex-1 py-2.5 rounded-xl bg-[#FACC15] text-black text-xs font-bold active:scale-95">Save Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= EDIT TASK MODAL ================= -->
+  <div id="taskEditModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-[#12151E] border border-[#272C3D] rounded-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">Edit Task</h3>
+        <button onclick="closeEditTaskModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <input type="hidden" id="editTaskId" />
+      <div>
+        <label class="text-[10px] text-slate-400 uppercase font-semibold">Title</label>
+        <input type="text" id="editTaskTitle" class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 uppercase font-semibold">Date</label>
+        <input type="date" id="editTaskDate" class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="deleteCurrentTask()" class="py-2.5 px-4 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs font-semibold">Delete</button>
+        <button onclick="saveTaskEdit()" class="flex-1 py-2.5 rounded-xl bg-[#FACC15] text-black text-xs font-bold">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SUPABASE MODAL ================= -->
+  <div id="supabaseModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-[#12151E] border border-[#272C3D] rounded-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database" class="w-4 h-4 text-[#FACC15]"></i>
+          <h3 class="text-sm font-bold text-white">Supabase Cloud Sync</h3>
+        </div>
+        <button onclick="closeSupabaseModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <p class="text-[11px] text-slate-400">Sync all your tasks and timetable across all your devices.</p>
+      <div>
+        <label class="text-[10px] text-slate-400 uppercase font-semibold">Project URL</label>
+        <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co" class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 uppercase font-semibold">Anon Public Key</label>
+        <input type="password" id="sbKey" placeholder="eyJhbGciOi..." class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
+      </div>
+      <button onclick="saveSupabaseConfig()" class="w-full py-2.5 rounded-xl bg-[#FACC15] text-black text-xs font-bold">Save & Sync</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let targetDaySelection = 'today';
+    let tasks = JSON.parse(localStorage.getItem('sf_tasks')) || [
+      { id: '1', title: 'Submit Mathematics Tutorial Sheet', date: getTodayStr(), completed: false },
+      { id: '2', title: 'Bring Breadboard & ESP32 for Lab', date: getTodayStr(), completed: false }
+    ];
+
+    let lectures = JSON.parse(localStorage.getItem('sf_lectures')) || [
+      { id: '1', time: '09:00 AM - 10:00 AM', title: 'Mathematics III', room: 'Hall 302', carry: 'Tutorial sheet & calculator' },
+      { id: '2', time: '10:15 AM - 12:15 PM', title: 'Microcontrollers Lab', room: 'Lab B-4', carry: 'Lab coat, ESP32, breadboard' },
+      { id: '3', time: '01:00 PM - 02:00 PM', title: 'Data Structures', room: 'Room 108', carry: 'Notes register' }
+    ];
+
+    let timerMinutes = 25;
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let isTimerRunning = false;
+    let supabaseClient = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      lucide.createIcons();
+      updateDateHeader();
+      initSupabase();
+      renderToday();
+      renderCalendar();
+      checkAuthStatus();
+
+      // Register Service Worker for Mobile PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW Registered', reg))
+          .catch(err => console.log('SW Register failed', err));
+      }
+    });
+
+    function getTodayStr() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function getTomorrowStr() {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    }
+
+    function updateDateHeader() {
+      const options = { weekday: 'short', month: 'short', day: 'numeric' };
+      document.getElementById('topDateLabel').innerText = new Date().toLocaleDateString('en-IN', options);
+    }
+
+    function checkAuthStatus() {
+      if (sessionStorage.getItem('sf_authenticated') === 'true') {
+        document.getElementById('authScreen').classList.add('hidden');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+      if (user && (pass === '1234' || pass === 'studyflow')) {
+        sessionStorage.setItem('sf_authenticated', 'true');
+        document.getElementById('authScreen').classList.add('hidden');
+      } else {
+        document.getElementById('authError').classList.remove('hidden');
+      }
+    }
+
+    function lockApp() {
+      sessionStorage.removeItem('sf_authenticated');
+      document.getElementById('authScreen').classList.remove('hidden');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('tab-active');
+        const icon = btn.querySelector('i');
+        if (icon) icon.setAttribute('stroke', '#94A3B8');
+      });
+
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      activeBtn.classList.add('tab-active');
+      const activeIcon = activeBtn.querySelector('i');
+      if (activeIcon) activeIcon.setAttribute('stroke', '#FACC15');
+
+      if (tabId === 'calendar') renderCalendar();
+      lucide.createIcons();
+    }
+
+    function renderToday() {
+      const lecContainer = document.getElementById('todayLecturesList');
+      lecContainer.innerHTML = '';
+      if (lectures.length === 0) {
+        lecContainer.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">No lectures scheduled today.</p>`;
+      } else {
+        lectures.forEach(l => {
+          const div = document.createElement('div');
+          div.className = 'p-3 rounded-xl bg-[#191D28] border border-[#272C3D] flex flex-col gap-1.5';
+          div.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white">${escapeHtml(l.title)}</span>
+              <span class="text-[10px] font-semibold text-[#FACC15] bg-[#FACC15]/10 px-2 py-0.5 rounded-full">${escapeHtml(l.time)}</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] text-slate-400">
+              <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-slate-500"></i> ${escapeHtml(l.room)}</span>
+            </div>
+            ${l.carry ? `
+              <div class="text-[11px] text-amber-200/90 bg-[#FACC15]/5 border border-[#FACC15]/20 px-2 py-1 rounded-lg flex items-center gap-1.5 mt-0.5">
+                <i data-lucide="backpack" class="w-3 h-3 text-[#FACC15] shrink-0"></i>
+                <span class="truncate">Carry: <strong>${escapeHtml(l.carry)}</strong></span>
+              </div>
+            ` : ''}
+          `;
+          lecContainer.appendChild(div);
+        });
+      }
+
+      const todayStr = getTodayStr();
+      const todayTasks = tasks.filter(t => t.date === todayStr);
+      const taskContainer = document.getElementById('todayTasksContainer');
+      document.getElementById('todayTaskCount').innerText = `${todayTasks.filter(t => !t.completed).length} Pending`;
+      taskContainer.innerHTML = '';
+
+      if (todayTasks.length === 0) {
+        taskContainer.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">No tasks for today. Relax or add one above!</p>`;
+      } else {
+        todayTasks.forEach(task => {
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between p-3 rounded-xl bg-[#12151E] border border-[#272C3D]';
+          item.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden">
+              <button onclick="toggleTaskCompletion('${task.id}')" class="shrink-0 w-5 h-5 rounded-md border ${task.completed ? 'bg-[#FACC15] border-[#FACC15] text-black' : 'border-[#272C3D] bg-[#191D28]'} flex items-center justify-center">
+                ${task.completed ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''}
+              </button>
+              <span class="text-xs font-medium ${task.completed ? 'line-through text-slate-500' : 'text-slate-200'} truncate">${escapeHtml(task.title)}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="openEditTaskModal('${task.id}')" class="p-1 rounded-md text-slate-400 hover:text-[#FACC15]"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+            </div>
+          `;
+          taskContainer.appendChild(item);
+        });
+      }
+      lucide.createIcons();
+    }
+
+    function setTargetDay(type) {
+      targetDaySelection = type;
+      const btnToday = document.getElementById('btnTargetToday');
+      const btnTom = document.getElementById('btnTargetTomorrow');
+      const btnOth = document.getElementById('btnTargetOther');
+      const customDate = document.getElementById('customTargetDate');
+
+      [btnToday, btnTom, btnOth].forEach(b => {
+        b.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#191D28] border border-[#272C3D] text-slate-300';
+      });
+
+      if (type === 'today') {
+        btnToday.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#FACC15] text-black';
+        customDate.classList.add('hidden');
+      } else if (type === 'tomorrow') {
+        btnTom.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#FACC15] text-black';
+        customDate.classList.add('hidden');
+      } else {
+        btnOth.className = 'flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#FACC15] text-black';
+        customDate.classList.remove('hidden');
+      }
+    }
+
+    function addTask() {
+      const input = document.getElementById('newTaskInput');
+      const title = input.value.trim();
+      if (!title) return;
+
+      let date = getTodayStr();
+      if (targetDaySelection === 'tomorrow') date = getTomorrowStr();
+      else if (targetDaySelection === 'other') {
+        const custom = document.getElementById('customTargetDate').value;
+        if (custom) date = custom;
+      }
+
+      const newTask = { id: Date.now().toString(), title, date, completed: false };
+      tasks.unshift(newTask);
+      saveTasksState();
+      input.value = '';
+      renderToday();
+      renderCalendar();
+      syncTaskToSupabase(newTask);
+    }
+
+    function toggleTaskCompletion(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      saveTasksState();
+      renderToday();
+      renderCalendar();
+    }
+
+    function openEditTaskModal(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      document.getElementById('editTaskId').value = task.id;
+      document.getElementById('editTaskTitle').value = task.title;
+      document.getElementById('editTaskDate').value = task.date;
+      document.getElementById('taskEditModal').classList.remove('hidden');
+    }
+
+    function closeEditTaskModal() {
+      document.getElementById('taskEditModal').classList.add('hidden');
+    }
+
+    function saveTaskEdit() {
+      const id = document.getElementById('editTaskId').value;
+      const title = document.getElementById('editTaskTitle').value.trim();
+      const date = document.getElementById('editTaskDate').value;
+      if (!title) return;
+
+      tasks = tasks.map(t => t.id === id ? { ...t, title, date } : t);
+      saveTasksState();
+      closeEditTaskModal();
+      renderToday();
+      renderCalendar();
+    }
+
+    function deleteCurrentTask() {
+      const id = document.getElementById('editTaskId').value;
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasksState();
+      closeEditTaskModal();
+      renderToday();
+      renderCalendar();
+    }
+
+    function saveTasksState() {
+      localStorage.setItem('sf_tasks', JSON.stringify(tasks));
+    }
+
+    function renderCalendar() {
+      const stream = document.getElementById('calendarAgendaStream');
+      stream.innerHTML = '';
+
+      const grouped = {};
+      tasks.forEach(t => {
+        if (!grouped[t.date]) grouped[t.date] = [];
+        grouped[t.date].push(t);
+      });
+
+      const sortedDates = Object.keys(grouped).sort();
+      const todayStr = getTodayStr();
+      const tomorrowStr = getTomorrowStr();
+
+      if (sortedDates.length === 0) {
+        stream.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">No scheduled agenda items found.</p>`;
+        return;
+      }
+
+      sortedDates.forEach(date => {
+        const section = document.createElement('div');
+        section.className = 'space-y-2';
+
+        let badge = date;
+        if (date === todayStr) badge = 'Today';
+        else if (date === tomorrowStr) badge = 'Tomorrow';
+
+        section.innerHTML = `
+          <div class="flex items-center gap-2 border-b border-[#272C3D] pb-1.5">
+            <span class="text-xs font-black ${badge === 'Today' ? 'text-[#FACC15]' : 'text-slate-300'} uppercase tracking-wide">${badge}</span>
+            <span class="text-[10px] text-slate-500">${date}</span>
+          </div>
+          <div class="space-y-2 pt-1" id="agenda-date-${date}"></div>
+        `;
+        stream.appendChild(section);
+
+        const listContainer = section.querySelector(`#agenda-date-${date}`);
+        grouped[date].forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'flex items-center justify-between p-3 rounded-xl bg-[#12151E] border border-[#272C3D]';
+          div.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="w-2 h-2 rounded-full ${item.completed ? 'bg-slate-600' : 'bg-[#FACC15]'}"></span>
+              <span class="text-xs ${item.completed ? 'line-through text-slate-500' : 'text-white'} truncate">${escapeHtml(item.title)}</span>
+            </div>
+            <button onclick="openEditTaskModal('${item.id}')" class="p-1 text-slate-400 hover:text-[#FACC15]"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+          `;
+          listContainer.appendChild(div);
+        });
+      });
+      lucide.createIcons();
+    }
+
+    function openTimetableModal() {
+      const container = document.getElementById('editableLecturesList');
+      container.innerHTML = '';
+
+      lectures.forEach((lec, idx) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-2 relative';
+        row.innerHTML = `
+          <button onclick="removeLectureRow(${idx})" class="absolute top-2 right-2 text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <div class="grid grid-cols-2 gap-2 pr-6">
+            <input type="text" placeholder="Subject Name" value="${escapeHtml(lec.title)}" class="lec-title px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="Time (e.g. 9-10 AM)" value="${escapeHtml(lec.time)}" class="lec-time px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" placeholder="Room / Venue" value="${escapeHtml(lec.room)}" class="lec-room px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="What to carry?" value="${escapeHtml(lec.carry || '')}" class="lec-carry px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      document.getElementById('timetableModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeTimetableModal() {
+      document.getElementById('timetableModal').classList.add('hidden');
+    }
+
+    function addNewLectureRow() {
+      lectures.push({ id: Date.now().toString(), title: 'New Lecture', time: '10:00 AM', room: 'Classroom', carry: 'Notebook' });
+      openTimetableModal();
+    }
+
+    function removeLectureRow(index) {
+      lectures.splice(index, 1);
+      openTimetableModal();
+    }
+
+    function saveTimetable() {
+      const rows = document.querySelectorAll('#editableLecturesList > div');
+      const updated = [];
+      rows.forEach((r, idx) => {
+        const title = r.querySelector('.lec-title').value.trim();
+        const time = r.querySelector('.lec-time').value.trim();
+        const room = r.querySelector('.lec-room').value.trim();
+        const carry = r.querySelector('.lec-carry').value.trim();
+        if (title) {
+          updated.push({ id: (idx + 1).toString(), title, time, room, carry });
+        }
+      });
+      lectures = updated;
+      localStorage.setItem('sf_lectures', JSON.stringify(lectures));
+      closeTimetableModal();
+      renderToday();
+    }
+
+    async function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const results = document.getElementById('roadmapResults');
+      results.innerHTML = `
+        <div class="p-4 rounded-xl bg-[#12151E] border border-[#272C3D] text-center space-y-2">
+          <div class="animate-spin text-[#FACC15] inline-block"><i data-lucide="loader-2" class="w-6 h-6"></i></div>
+          <p class="text-xs text-white font-semibold">Reading document & crafting roadmap...</p>
+        </div>
+      `;
+      lucide.createIcons();
+
+      let extractedTopic = file.name.replace(/\.[^/.]+$/, "");
+      if (file.type === "application/pdf") {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let fullText = "";
+          for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            fullText += content.items.map(it => it.str).join(" ") + " ";
+          }
+          if (fullText.trim().length > 20) {
+            extractedTopic = fullText.slice(0, 150).trim();
+          }
+        } catch (err) {
+          console.error("PDF read error", err);
+        }
+      }
+      displayGeneratedRoadmap(extractedTopic, file.name);
+    }
+
+    function generateRoadmapFromText() {
+      const text = document.getElementById('manualTopicInput').value.trim();
+      if (!text) return;
+      displayGeneratedRoadmap(text, text);
+    }
+
+    function displayGeneratedRoadmap(rawContent, titleTag) {
+      const results = document.getElementById('roadmapResults');
+      const cleanKeyword = titleTag.replace(/[^a-zA-Z0-9 ]/g, " ").slice(0, 35).trim();
+      const encodedYT = encodeURIComponent(cleanKeyword + " full tutorial explanation");
+
+      results.innerHTML = `
+        <div class="p-4 rounded-2xl bg-[#12151E] border border-[#272C3D] space-y-4">
+          <div class="flex items-center justify-between border-b border-[#272C3D] pb-3">
+            <div>
+              <span class="text-[10px] text-[#FACC15] uppercase font-bold tracking-wider">AI Study Plan</span>
+              <h4 class="text-sm font-bold text-white truncate max-w-[220px]">${escapeHtml(cleanKeyword)}</h4>
+            </div>
+            <button onclick="addRoadmapTasksToCalendar('${escapeHtml(cleanKeyword)}')" class="px-2.5 py-1.5 rounded-lg bg-[#FACC15] text-black text-[11px] font-bold active:scale-95">
+              + Add to Agenda
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
+              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 1: Core Fundamentals (Day 1-2)</span>
+              <p class="text-xs text-slate-300">Understand primary axioms, formulas, and definitions from notes.</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
+              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 2: Numerical & Problem Sets (Day 3-4)</span>
+              <p class="text-xs text-slate-300">Solve previous college exam papers and exercise problems.</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
+              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 3: Active Recall & Mock Quiz (Day 5)</span>
+              <p class="text-xs text-slate-300">Test understanding with closed notes; generate flashcards.</p>
+            </div>
+          </div>
+
+          <a href="https://www.youtube.com/results?search_query=${encodedYT}" target="_blank" 
+             class="flex items-center justify-between p-3 rounded-xl bg-red-950/20 border border-red-800/30 text-rose-300 hover:border-red-500 transition-colors">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="youtube" class="w-5 h-5 text-red-400"></i>
+              <div class="text-left">
+                <p class="text-xs font-bold text-white">Watch High-Rated Video Tutorials</p>
+                <p class="text-[10px] text-slate-400">Opens curated lecture playlists on YouTube</p>
+              </div>
+            </div>
+            <i data-lucide="external-link" class="w-4 h-4 text-slate-400"></i>
+          </a>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function addRoadmapTasksToCalendar(subject) {
+      const today = getTodayStr();
+      const tom = getTomorrowStr();
+      tasks.push(
+        { id: Date.now().toString(), title: `Study: ${subject} (Phase 1 Basics)`, date: today, completed: false },
+        { id: (Date.now() + 1).toString(), title: `Solve: ${subject} Practice Questions`, date: tom, completed: false }
+      );
+      saveTasksState();
+      renderToday();
+      alert(`Roadmap tasks for "${subject}" have been added to your agenda!`);
+    }
+
+    function setTimerDuration(mins) {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerMinutes = mins;
+      timerSeconds = 0;
+      updateTimerDisplay();
+      document.getElementById('timerToggleBtn').innerText = 'Start Focus';
+      document.getElementById('timerStateLabel').innerText = 'Session ready';
+    }
+
+    function promptEditFocusDuration() {
+      const custom = prompt('Enter study duration in minutes:', timerMinutes);
+      if (custom && !isNaN(custom) && parseInt(custom) > 0) {
+        setTimerDuration(parseInt(custom));
+      }
+    }
+
+    function updateTimerDisplay() {
+      const m = String(timerMinutes).padStart(2, '0');
+      const s = String(timerSeconds).padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+    }
+
+    function toggleTimer() {
+      const btn = document.getElementById('timerToggleBtn');
+      if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        btn.innerText = 'Resume';
+        document.getElementById('timerStateLabel').innerText = 'Paused';
+      } else {
+        isTimerRunning = true;
+        btn.innerText = 'Pause';
+        document.getElementById('timerStateLabel').innerText = 'Deep Work in progress';
+        timerInterval = setInterval(() => {
+          if (timerSeconds === 0) {
+            if (timerMinutes === 0) {
+              clearInterval(timerInterval);
+              isTimerRunning = false;
+              alert('Study session complete! Take a break.');
+              setTimerDuration(5);
+              return;
+            }
+            timerMinutes--;
+            timerSeconds = 59;
+          } else {
+            timerSeconds--;
+          }
+          updateTimerDisplay();
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      setTimerDuration(25);
+    }
+
+    function initSupabase() {
+      const url = localStorage.getItem('sf_sb_url');
+      const key = localStorage.getItem('sf_sb_key');
+      if (url && key && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(url, key);
+          loadDataFromSupabase();
+        } catch (e) {
+          console.error('Supabase init failed', e);
+        }
+      }
+    }
+
+    async function loadDataFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data: dbTasks, error } = await supabaseClient.from('tasks').select('*');
+        if (!error && dbTasks && dbTasks.length > 0) {
+          tasks = dbTasks;
+          saveTasksState();
+          renderToday();
+          renderCalendar();
+        }
+      } catch (err) {
+        console.warn('Could not pull from Supabase, using local cache', err);
+      }
+    }
+
+    async function syncTaskToSupabase(task) {
+      if (!supabaseClient) return;
+      try {
+        await supabaseClient.from('tasks').upsert({
+          id: task.id,
+          title: task.title,
+          date: task.date,
+          completed: task.completed
+        });
+      } catch (e) {
+        console.warn('Supabase sync error', e);
+      }
+    }
+
+    function openSupabaseModal() {
+      document.getElementById('sbUrl').value = localStorage.getItem('sf_sb_url') || '';
+      document.getElementById('sbKey').value = localStorage.getItem('sf_sb_key') || '';
+      document.getElementById('supabaseModal').classList.remove('hidden');
+    }
+
+    function closeSupabaseModal() {
+      document.getElementById('supabaseModal').classList.add('hidden');
+    }
+
+    function saveSupabaseConfig() {
+      const url = document.getElementById('sbUrl').value.trim();
+      const key = document.getElementById('sbKey').value.trim();
+      localStorage.setItem('sf_sb_url', url);
+      localStorage.setItem('sf_sb_key', key);
+      closeSupabaseModal();
+      initSupabase();
+      alert('Supabase credentials saved!');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+  </script>
 </body>
 </html>
