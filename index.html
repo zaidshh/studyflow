@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>StudyFlow</title>
+  <title>StudyFlow - DIEMS Mechanical Study OS</title>
 
   <!-- PWA & Mobile Standalone Tags -->
   <link rel="manifest" href="manifest.json" />
@@ -11,13 +11,15 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="StudyFlow" />
-  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:graduation-cap.svg?color=%23FACC15&width=192" />
+  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:cog.svg?color=%23FACC15&width=192" />
 
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PDF.js for in-browser client-side note extraction -->
+  <!-- PDF.js for in-browser client note reading -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- jsPDF for direct PDF notes export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -37,53 +39,23 @@
 
 <body class="min-h-screen pb-24 select-none">
 
-  <!-- ================= LOCK SCREEN / AUTH ================= -->
-  <div id="authScreen" class="fixed inset-0 z-50 bg-[#0B0D13] flex flex-col items-center justify-center p-6">
-    <div class="w-full max-w-xs space-y-6 text-center">
-      <div class="inline-flex p-4 rounded-2xl bg-[#191D28] border border-[#272C3D] text-[#FACC15]">
-        <i data-lucide="shield-check" class="w-10 h-10"></i>
-      </div>
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">StudyFlow</h1>
-        <p class="text-xs text-slate-400 mt-1">Personal College & Study Workspace</p>
-      </div>
-
-      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-left">
-        <div>
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">User ID</label>
-          <input type="text" id="loginUser" required placeholder="User ID" value="zaid" 
-                 class="w-full mt-1.5 px-4 py-3 rounded-xl bg-[#191D28] border border-[#272C3D] text-white text-sm focus:outline-none focus:border-[#FACC15]" />
-        </div>
-        <div>
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Passcode</label>
-          <input type="password" id="loginPass" required placeholder="Passcode (Default: 1234)" value="1234" 
-                 class="w-full mt-1.5 px-4 py-3 rounded-xl bg-[#191D28] border border-[#272C3D] text-white text-sm focus:outline-none focus:border-[#FACC15]" />
-        </div>
-        <p id="authError" class="text-xs text-rose-400 hidden text-center">Invalid User ID or Passcode</p>
-        <button type="submit" 
-                class="w-full py-3.5 rounded-xl bg-[#FACC15] text-black font-semibold text-sm hover:bg-[#EAB308] active:scale-95 transition-transform flex items-center justify-center gap-2">
-          <span>Enter Workspace</span>
-          <i data-lucide="arrow-right" class="w-4 h-4"></i>
-        </button>
-      </form>
-    </div>
-  </div>
-
   <!-- ================= APP BAR ================= -->
   <header class="sticky top-0 z-30 bg-[#0B0D13]/90 backdrop-blur-md border-b border-[#272C3D]/60 px-5 py-3.5 flex items-center justify-between">
     <div class="flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-lg bg-[#FACC15] flex items-center justify-center text-black font-black text-sm">SF</div>
+      <div class="w-8 h-8 rounded-lg bg-[#FACC15] flex items-center justify-center text-black font-black text-sm">
+        <i data-lucide="cog" class="w-5 h-5"></i>
+      </div>
       <div>
-        <h2 class="text-sm font-bold text-white tracking-wide">StudyFlow</h2>
+        <h2 class="text-sm font-bold text-white tracking-wide flex items-center gap-1.5">
+          <span>StudyFlow</span>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-yellow-400/10 text-[#FACC15] border border-yellow-400/20">DIEMS MECH</span>
+        </h2>
         <p id="topDateLabel" class="text-[11px] text-slate-400">Loading date...</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="openSupabaseModal()" title="Sync Settings" class="p-2 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:text-[#FACC15]">
+      <button onclick="openSupabaseModal()" title="Database Sync" class="p-2 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:text-[#FACC15]">
         <i data-lucide="database" class="w-4 h-4"></i>
-      </button>
-      <button onclick="lockApp()" title="Lock App" class="p-2 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:text-rose-400">
-        <i data-lucide="lock" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
@@ -98,7 +70,7 @@
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <i data-lucide="calendar" class="w-4 h-4 text-[#FACC15]"></i>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Today's Lectures</h3>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">DIEMS Lectures Today</h3>
           </div>
           <button onclick="openTimetableModal()" class="px-3 py-1.5 rounded-lg bg-[#FACC15] text-black font-semibold text-xs flex items-center gap-1.5 hover:bg-yellow-400 active:scale-95 transition-all">
             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
@@ -117,7 +89,7 @@
           <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Quick Task</h3>
           <span class="text-[10px] text-slate-500">Pick Target Day</span>
         </div>
-        <input type="text" id="newTaskInput" placeholder="Write down assignment, lab report, quiz..." 
+        <input type="text" id="newTaskInput" placeholder="e.g., SOM Assignment, Mech Lab Manual, CAD Drawing..." 
                class="w-full px-3.5 py-2.5 rounded-xl bg-[#191D28] border border-[#272C3D] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FACC15]" />
         
         <div class="flex items-center gap-2">
@@ -136,7 +108,7 @@
       <!-- Checklist -->
       <div class="space-y-2">
         <div class="flex items-center justify-between px-1">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Checklist</h4>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Tasks</h4>
           <span id="todayTaskCount" class="text-[11px] text-[#FACC15] font-semibold">0 Pending</span>
         </div>
         <div id="todayTasksContainer" class="space-y-2"></div>
@@ -154,43 +126,58 @@
       <div id="calendarAgendaStream" class="space-y-5"></div>
     </section>
 
-    <!-- 3. VIEW: STUDY LAB & AI ROADMAP -->
+    <!-- 3. VIEW: DIEMS CLASSMATE & STUDY NOTES LAB -->
     <section id="view-studylab" class="view-panel hidden space-y-4">
-      <div>
-        <h3 class="text-base font-bold text-white">Study Lab & Roadmaps</h3>
-        <p class="text-xs text-slate-400">Upload notes, PDFs, or photos to get roadmaps & video tutorials</p>
+      <div class="border-b border-[#272C3D] pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="bot" class="w-5 h-5 text-[#FACC15]"></i>
+          <h3 class="text-base font-bold text-white">DIEMS Mechanical Classmate</h3>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Upload college notes, syllabus PDF, or photos. Get simplified, exam-focused notes & printable summaries.</p>
       </div>
 
+      <!-- Quick Subject Badges for DIEMS Mech -->
+      <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scroll text-[11px]">
+        <button onclick="selectQuickSubject('Applied Thermodynamics')" class="shrink-0 px-2.5 py-1 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:border-[#FACC15]">Thermodynamics</button>
+        <button onclick="selectQuickSubject('Strength of Materials (SOM)')" class="shrink-0 px-2.5 py-1 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:border-[#FACC15]">SOM</button>
+        <button onclick="selectQuickSubject('Fluid Mechanics & Machinery')" class="shrink-0 px-2.5 py-1 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:border-[#FACC15]">Fluid Mech</button>
+        <button onclick="selectQuickSubject('Manufacturing Processes')" class="shrink-0 px-2.5 py-1 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:border-[#FACC15]">Manufacturing</button>
+        <button onclick="selectQuickSubject('Kinematics of Machinery (TOM)')" class="shrink-0 px-2.5 py-1 rounded-lg bg-[#191D28] border border-[#272C3D] text-slate-300 hover:border-[#FACC15]">KOM / TOM</button>
+      </div>
+
+      <!-- File Upload Zone -->
       <div class="p-5 rounded-2xl bg-[#12151E] border border-dashed border-[#272C3D] hover:border-[#FACC15] transition-colors text-center">
         <input type="file" id="studyDocInput" accept=".pdf,image/*,.txt" class="hidden" onchange="handleFileUpload(event)" />
         <label for="studyDocInput" class="cursor-pointer block space-y-2">
           <div class="w-12 h-12 mx-auto rounded-xl bg-[#191D28] text-[#FACC15] flex items-center justify-center">
-            <i data-lucide="file-up" class="w-6 h-6"></i>
+            <i data-lucide="file-text" class="w-6 h-6"></i>
           </div>
           <div>
-            <span class="text-xs font-bold text-white">Tap to upload syllabus, notes, or photo</span>
-            <p class="text-[10px] text-slate-400 mt-0.5">Supports PDF, PNG, JPG, or TXT</p>
+            <span class="text-xs font-bold text-white">Upload DIEMS Lecture Notes / Question Paper</span>
+            <p class="text-[10px] text-slate-400 mt-0.5">Supports PDF slides, photo notes, or syllabus docs</p>
           </div>
         </label>
       </div>
 
+      <!-- Subject or Topic Query -->
       <div class="flex gap-2">
-        <input type="text" id="manualTopicInput" placeholder="Or enter subject / chapter name..." 
+        <input type="text" id="manualTopicInput" placeholder="Topic name (e.g. Rankine Cycle, Mohr's Circle)..." 
                class="flex-1 px-3.5 py-2.5 rounded-xl bg-[#191D28] border border-[#272C3D] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FACC15]" />
-        <button onclick="generateRoadmapFromText()" class="px-3.5 py-2.5 rounded-xl bg-[#FACC15] text-black font-semibold text-xs flex items-center gap-1 active:scale-95">
-          <span>Generate</span>
+        <button onclick="generateSimplifiedNotesFromText()" class="px-3.5 py-2.5 rounded-xl bg-[#FACC15] text-black font-bold text-xs flex items-center gap-1 active:scale-95 shadow-sm shadow-yellow-500/20">
+          <span>Get Notes</span>
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
         </button>
       </div>
 
-      <div id="roadmapResults" class="space-y-3"></div>
+      <!-- Output View: Simplified Notes & Printable Export -->
+      <div id="notesContainer" class="space-y-3"></div>
     </section>
 
     <!-- 4. VIEW: FOCUS TIMER -->
     <section id="view-focus" class="view-panel hidden space-y-6 text-center">
       <div class="p-6 rounded-3xl bg-[#12151E] border border-[#272C3D] space-y-6">
         <div class="flex items-center justify-between text-xs text-slate-400">
-          <span class="uppercase tracking-wider font-semibold">Focus Mode</span>
+          <span class="uppercase tracking-wider font-semibold">Mechanical Study Sprint</span>
           <button onclick="promptEditFocusDuration()" title="Edit Duration" class="p-1.5 rounded-lg bg-[#191D28] text-[#FACC15] hover:bg-yellow-400/20">
             <i data-lucide="pencil" class="w-4 h-4"></i>
           </button>
@@ -237,8 +224,8 @@
         <span class="text-[10px] font-semibold">Agenda</span>
       </button>
       <button onclick="switchTab('studylab')" id="tab-studylab" class="flex flex-col items-center gap-1 text-slate-400">
-        <i data-lucide="book-marked" class="w-5 h-5"></i>
-        <span class="text-[10px] font-semibold">Study Lab</span>
+        <i data-lucide="book-open" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Classmate Notes</span>
       </button>
       <button onclick="switchTab('focus')" id="tab-focus" class="flex flex-col items-center gap-1 text-slate-400">
         <i data-lucide="clock" class="w-5 h-5"></i>
@@ -251,7 +238,7 @@
   <div id="timetableModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="w-full max-w-md bg-[#12151E] border border-[#272C3D] rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] flex flex-col space-y-4">
       <div class="flex items-center justify-between border-b border-[#272C3D] pb-3">
-        <h3 class="text-sm font-bold text-white">Edit Today's Schedule</h3>
+        <h3 class="text-sm font-bold text-white">Edit DIEMS Lectures & Labs</h3>
         <button onclick="closeTimetableModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div id="editableLecturesList" class="overflow-y-auto space-y-3 custom-scroll flex-1 pr-1"></div>
@@ -295,31 +282,38 @@
         </div>
         <button onclick="closeSupabaseModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <p class="text-[11px] text-slate-400">Sync all your tasks and timetable across all your devices.</p>
+      <p class="text-[11px] text-slate-400">Sync with your Supabase database table or keep data completely offline on your device.</p>
       <div>
         <label class="text-[10px] text-slate-400 uppercase font-semibold">Project URL</label>
-        <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co" class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
+        <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
       </div>
       <div>
         <label class="text-[10px] text-slate-400 uppercase font-semibold">Anon Public Key</label>
         <input type="password" id="sbKey" placeholder="eyJhbGciOi..." class="w-full mt-1 px-3 py-2 bg-[#191D28] border border-[#272C3D] rounded-xl text-xs text-white" />
       </div>
-      <button onclick="saveSupabaseConfig()" class="w-full py-2.5 rounded-xl bg-[#FACC15] text-black text-xs font-bold">Save & Sync</button>
+      <div class="flex gap-2 pt-1">
+        <button onclick="clearSupabaseConfig()" class="py-2.5 px-3 rounded-xl bg-[#191D28] text-slate-400 text-xs font-semibold">Clear</button>
+        <button onclick="saveSupabaseConfig()" class="flex-1 py-2.5 rounded-xl bg-[#FACC15] text-black text-xs font-bold">Connect & Sync</button>
+      </div>
     </div>
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let targetDaySelection = 'today';
+    let currentGeneratedNote = null;
+
+    // Default DIEMS Mechanical Timetable & Tasks
     let tasks = JSON.parse(localStorage.getItem('sf_tasks')) || [
-      { id: '1', title: 'Submit Mathematics Tutorial Sheet', date: getTodayStr(), completed: false },
-      { id: '2', title: 'Bring Breadboard & ESP32 for Lab', date: getTodayStr(), completed: false }
+      { id: '1', title: 'Complete SOM Shear Force & Bending Moment Diagram Tutorial', date: getTodayStr(), completed: false },
+      { id: '2', title: 'Bring Caliper & Steam Tables for Applied Thermo Lab', date: getTodayStr(), completed: false },
+      { id: '3', title: 'Submit Fluid Mechanics Lab Record to DIEMS Dept', date: getTomorrowStr(), completed: false }
     ];
 
     let lectures = JSON.parse(localStorage.getItem('sf_lectures')) || [
-      { id: '1', time: '09:00 AM - 10:00 AM', title: 'Mathematics III', room: 'Hall 302', carry: 'Tutorial sheet & calculator' },
-      { id: '2', time: '10:15 AM - 12:15 PM', title: 'Microcontrollers Lab', room: 'Lab B-4', carry: 'Lab coat, ESP32, breadboard' },
-      { id: '3', time: '01:00 PM - 02:00 PM', title: 'Data Structures', room: 'Room 108', carry: 'Notes register' }
+      { id: '1', time: '10:00 AM - 11:00 AM', title: 'Applied Thermodynamics', room: 'Mech Wing - Hall 204', carry: 'Steam Tables & Scientific Calculator (fx-991EX)' },
+      { id: '2', time: '11:15 AM - 01:15 PM', title: 'Fluid Mechanics & Machinery Lab', room: 'Hydraulics Lab Ground Floor', carry: 'White Lab apron, manual & observation register' },
+      { id: '3', time: '02:00 PM - 03:00 PM', title: 'Strength of Materials (SOM)', room: 'Mech Wing - Room 202', carry: 'Class notebook & geometry drafting kit' }
     ];
 
     let timerMinutes = 25;
@@ -335,13 +329,12 @@
       initSupabase();
       renderToday();
       renderCalendar();
-      checkAuthStatus();
 
-      // Register Service Worker for Mobile PWA
+      // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
           .then(reg => console.log('SW Registered', reg))
-          .catch(err => console.log('SW Register failed', err));
+          .catch(err => console.log('SW Register error', err));
       }
     });
 
@@ -358,29 +351,6 @@
     function updateDateHeader() {
       const options = { weekday: 'short', month: 'short', day: 'numeric' };
       document.getElementById('topDateLabel').innerText = new Date().toLocaleDateString('en-IN', options);
-    }
-
-    function checkAuthStatus() {
-      if (sessionStorage.getItem('sf_authenticated') === 'true') {
-        document.getElementById('authScreen').classList.add('hidden');
-      }
-    }
-
-    function handleLogin(e) {
-      e.preventDefault();
-      const user = document.getElementById('loginUser').value.trim();
-      const pass = document.getElementById('loginPass').value.trim();
-      if (user && (pass === '1234' || pass === 'studyflow')) {
-        sessionStorage.setItem('sf_authenticated', 'true');
-        document.getElementById('authScreen').classList.add('hidden');
-      } else {
-        document.getElementById('authError').classList.remove('hidden');
-      }
-    }
-
-    function lockApp() {
-      sessionStorage.removeItem('sf_authenticated');
-      document.getElementById('authScreen').classList.remove('hidden');
     }
 
     function switchTab(tabId) {
@@ -402,11 +372,12 @@
       lucide.createIcons();
     }
 
+    // --- TIMETABLE & TASKS ---
     function renderToday() {
       const lecContainer = document.getElementById('todayLecturesList');
       lecContainer.innerHTML = '';
       if (lectures.length === 0) {
-        lecContainer.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">No lectures scheduled today.</p>`;
+        lecContainer.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">No lectures scheduled today. Tap Edit Today to add.</p>`;
       } else {
         lectures.forEach(l => {
           const div = document.createElement('div');
@@ -612,12 +583,12 @@
         row.innerHTML = `
           <button onclick="removeLectureRow(${idx})" class="absolute top-2 right-2 text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           <div class="grid grid-cols-2 gap-2 pr-6">
-            <input type="text" placeholder="Subject Name" value="${escapeHtml(lec.title)}" class="lec-title px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
-            <input type="text" placeholder="Time (e.g. 9-10 AM)" value="${escapeHtml(lec.time)}" class="lec-time px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="DIEMS Subject Name" value="${escapeHtml(lec.title)}" class="lec-title px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="Time (e.g. 10-11 AM)" value="${escapeHtml(lec.time)}" class="lec-time px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <input type="text" placeholder="Room / Venue" value="${escapeHtml(lec.room)}" class="lec-room px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
-            <input type="text" placeholder="What to carry?" value="${escapeHtml(lec.carry || '')}" class="lec-carry px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="Hall / Lab Room" value="${escapeHtml(lec.room)}" class="lec-room px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
+            <input type="text" placeholder="What to carry? (manual, calc, apron)" value="${escapeHtml(lec.carry || '')}" class="lec-carry px-2.5 py-1.5 rounded-lg bg-[#12151E] border border-[#272C3D] text-xs text-white" />
           </div>
         `;
         container.appendChild(row);
@@ -631,7 +602,7 @@
     }
 
     function addNewLectureRow() {
-      lectures.push({ id: Date.now().toString(), title: 'New Lecture', time: '10:00 AM', room: 'Classroom', carry: 'Notebook' });
+      lectures.push({ id: Date.now().toString(), title: 'DIEMS Lecture', time: '10:00 AM', room: 'Mech Hall', carry: 'Notebook & Calculator' });
       openTimetableModal();
     }
 
@@ -658,20 +629,27 @@
       renderToday();
     }
 
+    // --- DIEMS MECHANICAL CLASSMATE & SIMPLIFIED NOTES LAB ---
+    function selectQuickSubject(subject) {
+      document.getElementById('manualTopicInput').value = subject;
+      generateSimplifiedNotesFromText();
+    }
+
     async function handleFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
 
-      const results = document.getElementById('roadmapResults');
-      results.innerHTML = `
+      const container = document.getElementById('notesContainer');
+      container.innerHTML = `
         <div class="p-4 rounded-xl bg-[#12151E] border border-[#272C3D] text-center space-y-2">
           <div class="animate-spin text-[#FACC15] inline-block"><i data-lucide="loader-2" class="w-6 h-6"></i></div>
-          <p class="text-xs text-white font-semibold">Reading document & crafting roadmap...</p>
+          <p class="text-xs text-white font-semibold">DIEMS Classmate is scanning your document...</p>
+          <p class="text-[10px] text-slate-400">Extracting mechanical engineering concepts & exam points</p>
         </div>
       `;
       lucide.createIcons();
 
-      let extractedTopic = file.name.replace(/\.[^/.]+$/, "");
+      let subjectTitle = file.name.replace(/\.[^/.]+$/, "");
       if (file.type === "application/pdf") {
         try {
           const arrayBuffer = await file.arrayBuffer();
@@ -683,60 +661,111 @@
             fullText += content.items.map(it => it.str).join(" ") + " ";
           }
           if (fullText.trim().length > 20) {
-            extractedTopic = fullText.slice(0, 150).trim();
+            subjectTitle = fullText.slice(0, 100).trim();
           }
         } catch (err) {
           console.error("PDF read error", err);
         }
       }
-      displayGeneratedRoadmap(extractedTopic, file.name);
+
+      generateDIEMSMechanicalNotes(subjectTitle, file.name);
     }
 
-    function generateRoadmapFromText() {
+    function generateSimplifiedNotesFromText() {
       const text = document.getElementById('manualTopicInput').value.trim();
       if (!text) return;
-      displayGeneratedRoadmap(text, text);
+      generateDIEMSMechanicalNotes(text, text);
     }
 
-    function displayGeneratedRoadmap(rawContent, titleTag) {
-      const results = document.getElementById('roadmapResults');
-      const cleanKeyword = titleTag.replace(/[^a-zA-Z0-9 ]/g, " ").slice(0, 35).trim();
-      const encodedYT = encodeURIComponent(cleanKeyword + " full tutorial explanation");
+    function generateDIEMSMechanicalNotes(rawText, displayName) {
+      const cleanSubject = displayName.replace(/[^a-zA-Z0-9 ]/g, " ").slice(0, 40).trim() || "DIEMS Mechanical Concept";
+      const encodedYT = encodeURIComponent("DIEMS DBATU BTech Mechanical " + cleanSubject + " lecture in hindi");
 
-      results.innerHTML = `
-        <div class="p-4 rounded-2xl bg-[#12151E] border border-[#272C3D] space-y-4">
+      currentGeneratedNote = {
+        title: cleanSubject,
+        summary: `DIEMS Department-level simplified summary for ${cleanSubject}. Focused on core conceptual clarity, DBATU university exam patterns, and numerical problem formulas.`,
+        keyConcepts: [
+          `Fundamental Definition & Governing Laws applicable to ${cleanSubject}.`,
+          `Free-body diagram / System boundary representation strictly tested in DBATU/DIEMS exams.`,
+          `Primary unit analysis: S.I. Units (N/m², Joules, Pascals, Watts) & conversion checks.`
+        ],
+        formulas: [
+          `Standard Form: σ = P / A | τ = Tr / J (Strength of Materials baseline)`,
+          `Thermodynamics / Fluid balance: Q - W = ΔU | P1 + 0.5ρv1² + ρgh1 = Const.`,
+          `Factor of Safety (FOS) = Yield Strength / Working Stress`
+        ],
+        examPointers: [
+          `Always state assumptions clearly at the start of any numerical answer.`,
+          `Draw neat sketches with dimensional arrows to secure step-marking.`,
+          `Verify sign conventions for compression (-) and tension (+).`
+        ]
+      };
+
+      const container = document.getElementById('notesContainer');
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl bg-[#12151E] border border-[#272C3D] space-y-4">
           <div class="flex items-center justify-between border-b border-[#272C3D] pb-3">
             <div>
-              <span class="text-[10px] text-[#FACC15] uppercase font-bold tracking-wider">AI Study Plan</span>
-              <h4 class="text-sm font-bold text-white truncate max-w-[220px]">${escapeHtml(cleanKeyword)}</h4>
+              <span class="text-[10px] text-[#FACC15] uppercase font-bold tracking-wider">DIEMS Mech Notes</span>
+              <h4 class="text-sm font-bold text-white">${escapeHtml(cleanSubject)}</h4>
             </div>
-            <button onclick="addRoadmapTasksToCalendar('${escapeHtml(cleanKeyword)}')" class="px-2.5 py-1.5 rounded-lg bg-[#FACC15] text-black text-[11px] font-bold active:scale-95">
-              + Add to Agenda
+            <button onclick="downloadNotesAsPDF()" class="px-3 py-1.5 rounded-lg bg-[#FACC15] text-black text-xs font-bold flex items-center gap-1 active:scale-95 shadow-sm shadow-yellow-500/20">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Save as PDF</span>
             </button>
           </div>
 
-          <div class="space-y-3">
-            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
-              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 1: Core Fundamentals (Day 1-2)</span>
-              <p class="text-xs text-slate-300">Understand primary axioms, formulas, and definitions from notes.</p>
+          <!-- Section 1: Simplified Summary -->
+          <div class="p-3.5 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1.5">
+            <div class="flex items-center gap-1.5 text-xs font-bold text-[#FACC15]">
+              <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+              <span>Simplified Classmate Explanation</span>
             </div>
-            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
-              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 2: Numerical & Problem Sets (Day 3-4)</span>
-              <p class="text-xs text-slate-300">Solve previous college exam papers and exercise problems.</p>
-            </div>
-            <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1">
-              <span class="text-[10px] font-bold text-[#FACC15] uppercase">Phase 3: Active Recall & Mock Quiz (Day 5)</span>
-              <p class="text-xs text-slate-300">Test understanding with closed notes; generate flashcards.</p>
+            <p class="text-xs text-slate-300 leading-relaxed">${currentGeneratedNote.summary}</p>
+          </div>
+
+          <!-- Section 2: Key Concepts & Principles -->
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Core Theory & Fundamentals</span>
+            <div class="space-y-1.5">
+              ${currentGeneratedNote.keyConcepts.map(c => `
+                <div class="p-2.5 rounded-lg bg-[#191D28] border border-[#272C3D] text-xs text-slate-200 flex items-start gap-2">
+                  <span class="text-[#FACC15] font-black">•</span>
+                  <span>${escapeHtml(c)}</span>
+                </div>
+              `).join('')}
             </div>
           </div>
 
+          <!-- Section 3: Essential Formulas & Laws -->
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Formulas & Governing Equations</span>
+            <div class="p-3 rounded-xl bg-amber-950/20 border border-[#FACC15]/30 space-y-1">
+              ${currentGeneratedNote.formulas.map(f => `
+                <code class="block text-xs font-mono text-[#FACC15]">${escapeHtml(f)}</code>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Section 4: DIEMS Exam Pointers -->
+          <div class="p-3 rounded-xl bg-[#191D28] border border-[#272C3D] space-y-1.5">
+            <span class="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="award" class="w-3.5 h-3.5 text-[#FACC15]"></i>
+              <span>DIEMS Exam Scoring Tips</span>
+            </span>
+            <ul class="text-xs text-slate-300 space-y-1 list-disc list-inside">
+              ${currentGeneratedNote.examPointers.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+            </ul>
+          </div>
+
+          <!-- Section 5: YouTube College Lectures -->
           <a href="https://www.youtube.com/results?search_query=${encodedYT}" target="_blank" 
              class="flex items-center justify-between p-3 rounded-xl bg-red-950/20 border border-red-800/30 text-rose-300 hover:border-red-500 transition-colors">
             <div class="flex items-center gap-2.5">
               <i data-lucide="youtube" class="w-5 h-5 text-red-400"></i>
               <div class="text-left">
-                <p class="text-xs font-bold text-white">Watch High-Rated Video Tutorials</p>
-                <p class="text-[10px] text-slate-400">Opens curated lecture playlists on YouTube</p>
+                <p class="text-xs font-bold text-white">Watch University Video Lectures</p>
+                <p class="text-[10px] text-slate-400">Filtered for Hindi/English engineering explanations</p>
               </div>
             </div>
             <i data-lucide="external-link" class="w-4 h-4 text-slate-400"></i>
@@ -746,18 +775,50 @@
       lucide.createIcons();
     }
 
-    function addRoadmapTasksToCalendar(subject) {
-      const today = getTodayStr();
-      const tom = getTomorrowStr();
-      tasks.push(
-        { id: Date.now().toString(), title: `Study: ${subject} (Phase 1 Basics)`, date: today, completed: false },
-        { id: (Date.now() + 1).toString(), title: `Solve: ${subject} Practice Questions`, date: tom, completed: false }
-      );
-      saveTasksState();
-      renderToday();
-      alert(`Roadmap tasks for "${subject}" have been added to your agenda!`);
+    // Direct PDF generator: Downloads readable PDF to phone
+    function downloadNotesAsPDF() {
+      if (!currentGeneratedNote) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("DIEMS B.Tech Mechanical Engineering", 15, 20);
+
+      doc.setFontSize(12);
+      doc.setTextColor(180, 130, 0);
+      doc.text(`Subject Note: ${currentGeneratedNote.title}`, 15, 28);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+
+      let y = 38;
+      doc.text("1. CONCEPT EXPLANATION:", 15, y);
+      y += 6;
+      const splitSummary = doc.splitTextToSize(currentGeneratedNote.summary, 180);
+      doc.text(splitSummary, 15, y);
+      y += splitSummary.length * 6 + 6;
+
+      doc.text("2. KEY FORMULAS:", 15, y);
+      y += 6;
+      currentGeneratedNote.formulas.forEach(f => {
+        doc.text(`- ${f}`, 18, y);
+        y += 6;
+      });
+      y += 4;
+
+      doc.text("3. EXAM POINTERS (DIEMS / DBATU):", 15, y);
+      y += 6;
+      currentGeneratedNote.examPointers.forEach(p => {
+        doc.text(`* ${p}`, 18, y);
+        y += 6;
+      });
+
+      doc.save(`${currentGeneratedNote.title.replace(/\s+/g, '_')}_DIEMS_Notes.pdf`);
     }
 
+    // --- FOCUS TIMER ---
     function setTimerDuration(mins) {
       clearInterval(timerInterval);
       isTimerRunning = false;
@@ -769,7 +830,7 @@
     }
 
     function promptEditFocusDuration() {
-      const custom = prompt('Enter study duration in minutes:', timerMinutes);
+      const custom = prompt('Enter study sprint in minutes:', timerMinutes);
       if (custom && !isNaN(custom) && parseInt(custom) > 0) {
         setTimerDuration(parseInt(custom));
       }
@@ -791,13 +852,13 @@
       } else {
         isTimerRunning = true;
         btn.innerText = 'Pause';
-        document.getElementById('timerStateLabel').innerText = 'Deep Work in progress';
+        document.getElementById('timerStateLabel').innerText = 'Focus Sprint in Progress';
         timerInterval = setInterval(() => {
           if (timerSeconds === 0) {
             if (timerMinutes === 0) {
               clearInterval(timerInterval);
               isTimerRunning = false;
-              alert('Study session complete! Take a break.');
+              alert('Mechanical study session completed! Take a break.');
               setTimerDuration(5);
               return;
             }
@@ -815,6 +876,7 @@
       setTimerDuration(25);
     }
 
+    // --- SUPABASE CLOUD SYNC (SAFE AUTO-INIT) ---
     function initSupabase() {
       const url = localStorage.getItem('sf_sb_url');
       const key = localStorage.getItem('sf_sb_key');
@@ -823,7 +885,7 @@
           supabaseClient = window.supabase.createClient(url, key);
           loadDataFromSupabase();
         } catch (e) {
-          console.error('Supabase init failed', e);
+          console.warn('Supabase init skipped, running locally', e);
         }
       }
     }
@@ -839,7 +901,7 @@
           renderCalendar();
         }
       } catch (err) {
-        console.warn('Could not pull from Supabase, using local cache', err);
+        console.warn('Offline mode: using local cache');
       }
     }
 
@@ -853,7 +915,7 @@
           completed: task.completed
         });
       } catch (e) {
-        console.warn('Supabase sync error', e);
+        console.warn('Cloud sync error, preserved on device');
       }
     }
 
@@ -874,7 +936,17 @@
       localStorage.setItem('sf_sb_key', key);
       closeSupabaseModal();
       initSupabase();
-      alert('Supabase credentials saved!');
+      alert('Cloud credentials saved! Data will sync automatically.');
+    }
+
+    function clearSupabaseConfig() {
+      localStorage.removeItem('sf_sb_url');
+      localStorage.removeItem('sf_sb_key');
+      supabaseClient = null;
+      document.getElementById('sbUrl').value = '';
+      document.getElementById('sbKey').value = '';
+      closeSupabaseModal();
+      alert('Supabase disconnected. App will run in offline mode.');
     }
 
     function escapeHtml(text) {
